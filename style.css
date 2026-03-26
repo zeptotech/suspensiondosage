@@ -335,8 +335,6 @@
   .card.amox .rev-row-value { color: var(--amox-accent); }
   .card.ceph .rev-row-value { color: var(--ceph-accent); }
 
-
-
   /* ── Responsive ──────────────────────────────────────────── */
   @media (max-width: 640px) {
     .card-body { grid-template-columns: 1fr; }

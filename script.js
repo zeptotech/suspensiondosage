@@ -1,9 +1,7 @@
 const state = {
     amox: { unit: 'mL', freq: 2, revFreq: 2, wtUnit: 'kg', revWtUnit: 'kg', fwdConc: 50, revConc: 50 },
-    ceph: { unit: 'mL', freq: 2, revFreq: 2, wtUnit: 'kg', revWtUnit: 'kg' }
+    ceph: { unit: 'mL', freq: 2, revFreq: 2, wtUnit: 'kg', revWtUnit: 'kg', fwdConc: 50, revConc: 50 }
   };
-
-
 
   function setUnit(drug, unit) {
     state[drug].unit = unit;
@@ -46,6 +44,16 @@ const state = {
       is250 ? '= 50 mg/mL' : '= 25 mg/mL';
   }
 
+  function setCephConc(side, mgPerMl) {
+    const key = side === 'fwd' ? 'fwdConc' : 'revConc';
+    state.ceph[key] = mgPerMl;
+    const is250 = mgPerMl === 50;
+    document.getElementById(`ceph-${side === 'fwd' ? '' : 'rev-'}conc-250`).classList.toggle('active',  is250);
+    document.getElementById(`ceph-${side === 'fwd' ? '' : 'rev-'}conc-125`).classList.toggle('active', !is250);
+    document.getElementById(`ceph-${side === 'fwd' ? '' : 'rev-'}conc-info`).textContent =
+      is250 ? '= 50 mg/mL' : '= 25 mg/mL';
+  }
+
   /* LIVE HINTS — show the equivalent value in the other unit as the user types */
 
   function updateWtHint(drug, side, val) {
@@ -58,18 +66,6 @@ const state = {
       ? `= ${(val / 2.20462).toFixed(2)} kg`
       : `= ${(val * 2.20462).toFixed(1)} lb`;
   }
-
-  function updateConcHint(hintId, val) {
-    const el = document.getElementById(hintId);
-    if (el && !isNaN(val) && val > 0)
-      el.textContent = `${(val * 5).toFixed(0)} mg/5 mL = ${val} mg/mL`;
-  }
-
-  ['ceph-conc', 'ceph-rev-conc'].forEach(id => {
-    document.getElementById(id).addEventListener('input', function () {
-      updateConcHint(id + '-info', parseFloat(this.value));
-    });
-  });
 
   [['amox','fwd','amox-weight'],    ['amox','rev','amox-rev-weight'],
    ['ceph','fwd','ceph-weight'],    ['ceph','rev','ceph-rev-weight']
@@ -87,13 +83,10 @@ const state = {
     return state[drug][key] === 'lb' ? raw / 2.20462 : raw;
   }
 
-
   function calcForward(drug) {
     const weightKg = getWeightKg(drug, 'fwd');
     const dose     = parseFloat(document.getElementById(`${drug}-dose`).value);
-    const conc     = drug === 'amox'
-      ? state.amox.fwdConc
-      : parseFloat(document.getElementById(`${drug}-conc`).value);
+    const conc     = state[drug].fwdConc;
     const { unit, freq, wtUnit } = state[drug];
     const box      = document.getElementById(`${drug}-fwd-result`);
 
@@ -101,7 +94,6 @@ const state = {
 
     if (isNaN(weightKg) || weightKg <= 0) return showErr(box, `${drug}-fwd-value`, 'Enter a valid weight.');
     if (isNaN(dose)     || dose     <= 0) return showErr(box, `${drug}-fwd-value`, 'Enter a valid dose.');
-    if (isNaN(conc)     || conc     <= 0) return showErr(box, `${drug}-fwd-value`, 'Enter a valid concentration.');
 
     const doseMg   = unit === 'mL' ? dose * conc : dose;
     const mgKgDay  = (doseMg * freq) / weightKg;
@@ -122,9 +114,7 @@ const state = {
   function calcReverse(drug) {
     const weightKg = getWeightKg(drug, 'rev');
     const target   = parseFloat(document.getElementById(`${drug}-rev-target`).value);
-    const conc     = drug === 'amox'
-      ? state.amox.revConc
-      : parseFloat(document.getElementById(`${drug}-rev-conc`).value);
+    const conc     = state[drug].revConc;
     const revFreq  = state[drug].revFreq;
     const box      = document.getElementById(`${drug}-rev-result`);
 
@@ -132,7 +122,6 @@ const state = {
 
     if (isNaN(weightKg) || weightKg <= 0) return showRevErr(box, drug, 'Enter a valid weight.');
     if (isNaN(target)   || target   <= 0) return showRevErr(box, drug, 'Enter a target mg/kg/day.');
-    if (isNaN(conc)     || conc     <= 0) return showRevErr(box, drug, 'Enter a valid concentration.');
 
     const totalMgDay = target * weightKg;
     const freqLabel  = { 2: 'BID', 3: 'TID', 4: 'QID' }[revFreq];
