@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pediatric Dosage Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f4f1eb;
+    --panel: #ffffff;
+    --amox-accent: #2e7d6e;
+    --amox-light: #e6f4f1;
+    --amox-mid: #a8d5cc;
+    --ceph-accent: #5b4fa8;
+    --ceph-light: #eeecf8;
+    --ceph-mid: #bdb7e0;
+    --text: #1a1a2e;
+    --muted: #6b6b80;
+    --border: #ddd8cc;
+    --error: #c0392b;
+    --result-bg: #1a1a2e;
+    --result-text: #f4f1eb;
+    --shadow: 0 8px 32px rgba(26,26,46,0.10);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Sora', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 0 0 60px;
+  }
+
+  header {
+    background: var(--result-bg);
+    color: var(--result-text);
+    padding: 38px 32px 32px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  header::before {
+    content: '';
+    position: absolute;
+    top: -60px; left: -60px;
+    width: 220px; height: 220px;
+    background: radial-gradient(circle, rgba(46,125,110,0.3) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  header::after {
+    content: '';
+    position: absolute;
+    bottom: -60px; right: -60px;
+    width: 220px; height: 220px;
+    background: radial-gradient(circle, rgba(91,79,168,0.3) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  header h1 {
+    font-family: 'Sora', sans-serif;
+    font-size: clamp(1.4rem, 4vw, 2.1rem);
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    position: relative;
+  }
+  header p {
+    font-size: 0.88rem;
+    color: #a0a0b8;
+    margin-top: 6px;
+    font-weight: 300;
+    position: relative;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .disclaimer {
+    background: #fff8e6;
+    border-left: 4px solid #e6a817;
+    margin: 28px auto 0;
+    max-width: 760px;
+    padding: 12px 18px;
+    font-size: 0.78rem;
+    color: #7a5c10;
+    border-radius: 0 6px 6px 0;
+  }
+
+  .cards-wrapper {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+    max-width: 900px;
+    margin: 36px auto 0;
+    padding: 0 20px;
+  }
+
+  @media (max-width: 640px) {
+    .cards-wrapper { grid-template-columns: 1fr; }
+  }
+
+  .card {
+    background: var(--panel);
+    border-radius: 18px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+
+  .card-header {
+    padding: 22px 26px 18px;
+    position: relative;
+  }
+  .card.amox .card-header { background: var(--amox-light); border-bottom: 2px solid var(--amox-mid); }
+  .card.ceph .card-header { background: var(--ceph-light); border-bottom: 2px solid var(--ceph-mid); }
+
+  .drug-badge {
+    display: inline-block;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.68rem;
+    font-weight: 500;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-bottom: 8px;
+  }
+  .card.amox .drug-badge { background: var(--amox-accent); color: white; }
+  .card.ceph .drug-badge { background: var(--ceph-accent); color: white; }
+
+  .card-header h2 {
+    font-size: 1.18rem;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+  }
+  .card.amox .card-header h2 { color: var(--amox-accent); }
+  .card.ceph .card-header h2 { color: var(--ceph-accent); }
+
+  .card-header .subtitle {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: 3px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .card-body { padding: 24px 26px; }
+
+  .field-group {
+    margin-bottom: 18px;
+  }
+  label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  .input-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  input[type="number"] {
+    flex: 1;
+    padding: 10px 14px;
+    font-family: 'DM Mono', monospace;
+    font-size: 1rem;
+    border: 1.5px solid var(--border);
+    border-radius: 9px;
+    background: #fafaf8;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -moz-appearance: textfield;
+  }
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+  .card.amox input[type="number"]:focus { border-color: var(--amox-accent); box-shadow: 0 0 0 3px rgba(46,125,110,0.12); }
+  .card.ceph input[type="number"]:focus { border-color: var(--ceph-accent); box-shadow: 0 0 0 3px rgba(91,79,168,0.12); }
+
+  .unit-toggle {
+    display: flex;
+    border: 1.5px solid var(--border);
+    border-radius: 9px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .unit-toggle button {
+    padding: 9px 14px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.82rem;
+    font-weight: 500;
+    border: none;
+    cursor: pointer;
+    background: #fafaf8;
+    color: var(--muted);
+    transition: background 0.15s, color 0.15s;
+  }
+  .unit-toggle button:not(:last-child) { border-right: 1.5px solid var(--border); }
+
+  .card.amox .unit-toggle button.active { background: var(--amox-accent); color: white; }
+  .card.ceph .unit-toggle button.active { background: var(--ceph-accent); color: white; }
+
+  .concentration-info {
+    font-size: 0.74rem;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    margin-top: 5px;
+  }
+
+  .calc-btn {
+    width: 100%;
+    padding: 13px;
+    font-family: 'Sora', sans-serif;
+    font-size: 0.92rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    margin-top: 8px;
+    letter-spacing: 0.2px;
+    transition: transform 0.12s, opacity 0.15s, box-shadow 0.15s;
+  }
+  .calc-btn:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,0,0,0.13); }
+  .calc-btn:active { transform: translateY(0); }
+  .card.amox .calc-btn { background: var(--amox-accent); color: white; }
+  .card.ceph .calc-btn { background: var(--ceph-accent); color: white; }
+
+  .result-box {
+    margin-top: 18px;
+    border-radius: 12px;
+    padding: 16px 18px;
+    display: none;
+    animation: fadeSlide 0.3s ease;
+  }
+  .result-box.show { display: block; }
+  .card.amox .result-box { background: var(--amox-light); border: 1.5px solid var(--amox-mid); }
+  .card.ceph .result-box { background: var(--ceph-light); border: 1.5px solid var(--ceph-mid); }
+
+  .result-box.error-box {
+    background: #fdecea;
+    border-color: #f5b7b1;
+  }
+
+  .result-label {
+    font-size: 0.7rem;
+    font-family: 'DM Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .result-value {
+    font-family: 'DM Mono', monospace;
+    font-size: 1.45rem;
+    font-weight: 500;
+  }
+  .card.amox .result-value { color: var(--amox-accent); }
+  .card.ceph .result-value { color: var(--ceph-accent); }
+  .result-box.error-box .result-value { color: var(--error); font-size: 0.85rem; }
+
+  .result-breakdown {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    line-height: 1.7;
+  }
+
+  .range-indicator {
+    display: inline-block;
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 20px;
+    margin-top: 6px;
+    font-family: 'DM Mono', monospace;
+    font-weight: 500;
+  }
+  .range-ok { background: #d4edda; color: #1a6b2e; }
+  .range-low { background: #fff3cd; color: #856404; }
+  .range-high { background: #f8d7da; color: #721c24; }
+
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 14px 0;
+  }
+
+  @keyframes fadeSlide {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  footer {
+    text-align: center;
+    margin-top: 48px;
+    font-size: 0.72rem;
+    color: #a0a0b0;
+    font-family: 'DM Mono', monospace;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Pediatric Dosage Calculator</h1>
+  <p>Liquid Suspension · mg/kg/day Reference</p>
+</header>
+
+<div style="max-width:760px;margin:0 auto;padding:0 20px;">
+  <div class="disclaimer">
+    ⚠️ <strong>For reference only.</strong> Always verify calculations independently. Consult current clinical guidelines and prescriber judgment for all dosing decisions.
+  </div>
+</div>
+
+<div class="cards-wrapper">
+
+  <!-- AMOXICILLIN -->
+  <div class="card amox">
+    <div class="card-header">
+      <div class="drug-badge">Antibiotic</div>
+      <h2>Amoxicillin</h2>
+      <div class="subtitle">Oral Liquid Suspension</div>
+    </div>
+    <div class="card-body">
+
+      <div class="field-group">
+        <label>Patient Weight (kg)</label>
+        <input type="number" id="amox-weight" placeholder="e.g. 12.5" min="0.1" step="0.1">
+      </div>
+
+      <div class="field-group">
+        <label>Dose Administered</label>
+        <div class="input-row">
+          <input type="number" id="amox-dose" placeholder="e.g. 5" min="0" step="0.1">
+          <div class="unit-toggle">
+            <button class="active" id="amox-unit-ml" onclick="setUnit('amox','mL')">mL</button>
+            <button id="amox-unit-mg" onclick="setUnit('amox','mg')">mg</button>
+          </div>
+        </div>
+        <div class="concentration-info" id="amox-conc-info">Concentration: 250 mg/5 mL (50 mg/mL)</div>
+      </div>
+
+      <div class="field-group">
+        <label>Concentration (mg/mL)</label>
+        <div class="input-row">
+          <input type="number" id="amox-conc" value="50" min="1" step="0.1" placeholder="50">
+        </div>
+        <div class="concentration-info">Common: 125 mg/5mL=25 mg/mL · 250 mg/5mL=50 mg/mL · 400 mg/5mL=80 mg/mL</div>
+      </div>
+
+      <div class="field-group">
+        <label>Doses per Day</label>
+        <div class="unit-toggle" style="display:inline-flex;">
+          <button class="active" id="amox-freq-2" onclick="setFreq('amox',2)">BID</button>
+          <button id="amox-freq-3" onclick="setFreq('amox',3)">TID</button>
+          <button id="amox-freq-1" onclick="setFreq('amox',1)">QD</button>
+        </div>
+      </div>
+
+      <button class="calc-btn" onclick="calculate('amox')">Calculate mg/kg/day</button>
+
+      <div class="result-box" id="amox-result">
+        <div class="result-label">Result</div>
+        <div class="result-value" id="amox-result-value"></div>
+        <div class="result-breakdown" id="amox-breakdown"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- CEPHALEXIN -->
+  <div class="card ceph">
+    <div class="card-header">
+      <div class="drug-badge">Antibiotic</div>
+      <h2>Cephalexin</h2>
+      <div class="subtitle">Oral Liquid Suspension</div>
+    </div>
+    <div class="card-body">
+
+      <div class="field-group">
+        <label>Patient Weight (kg)</label>
+        <input type="number" id="ceph-weight" placeholder="e.g. 12.5" min="0.1" step="0.1">
+      </div>
+
+      <div class="field-group">
+        <label>Dose Administered</label>
+        <div class="input-row">
+          <input type="number" id="ceph-dose" placeholder="e.g. 5" min="0" step="0.1">
+          <div class="unit-toggle">
+            <button class="active" id="ceph-unit-ml" onclick="setUnit('ceph','mL')">mL</button>
+            <button id="ceph-unit-mg" onclick="setUnit('ceph','mg')">mg</button>
+          </div>
+        </div>
+        <div class="concentration-info" id="ceph-conc-info">Concentration: 250 mg/5 mL (50 mg/mL)</div>
+      </div>
+
+      <div class="field-group">
+        <label>Concentration (mg/mL)</label>
+        <div class="input-row">
+          <input type="number" id="ceph-conc" value="50" min="1" step="0.1" placeholder="50">
+        </div>
+        <div class="concentration-info">Common: 125 mg/5mL=25 mg/mL · 250 mg/5mL=50 mg/mL</div>
+      </div>
+
+      <div class="field-group">
+        <label>Doses per Day</label>
+        <div class="unit-toggle" style="display:inline-flex;">
+          <button class="active" id="ceph-freq-2" onclick="setFreq('ceph',2)">BID</button>
+          <button id="ceph-freq-3" onclick="setFreq('ceph',3)">TID</button>
+          <button id="ceph-freq-4" onclick="setFreq('ceph',4)">QID</button>
+        </div>
+      </div>
+
+      <button class="calc-btn" onclick="calculate('ceph')">Calculate mg/kg/day</button>
+
+      <div class="result-box" id="ceph-result">
+        <div class="result-label">Result</div>
+        <div class="result-value" id="ceph-result-value"></div>
+        <div class="result-breakdown" id="ceph-breakdown"></div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <p>Pediatric Dosage Calculator · For clinical reference use only</p>
+</footer>
+
+<script>
+  const state = {
+    amox: { unit: 'mL', freq: 2 },
+    ceph: { unit: 'mL', freq: 2 }
+  };
+
+  // Typical ranges (mg/kg/day)
+  const ranges = {
+    amox: { low: 20, high: 90 },   // standard 40-90 mg/kg/day, mild 20-40
+    ceph: { low: 25, high: 100 }   // 25-100 mg/kg/day
+  };
+
+  function setUnit(drug, unit) {
+    state[drug].unit = unit;
+    const mlBtn = document.getElementById(`${drug}-unit-ml`);
+    const mgBtn = document.getElementById(`${drug}-unit-mg`);
+    mlBtn.classList.toggle('active', unit === 'mL');
+    mgBtn.classList.toggle('active', unit === 'mg');
+    updateConcInfo(drug);
+  }
+
+  function setFreq(drug, freq) {
+    state[drug].freq = freq;
+    const freqOptions = drug === 'amox' ? [1,2,3] : [2,3,4];
+    freqOptions.forEach(f => {
+      const btn = document.getElementById(`${drug}-freq-${f}`);
+      if (btn) btn.classList.toggle('active', f === freq);
+    });
+  }
+
+  function updateConcInfo(drug) {
+    const concEl = document.getElementById(`${drug}-conc-info`);
+    const concVal = parseFloat(document.getElementById(`${drug}-conc`).value);
+    if (!isNaN(concVal)) {
+      const per5 = (concVal * 5).toFixed(0);
+      concEl.textContent = `Concentration: ${per5} mg/5 mL (${concVal} mg/mL)`;
+    }
+  }
+
+  // Update concentration info on change
+  ['amox','ceph'].forEach(drug => {
+    document.getElementById(`${drug}-conc`).addEventListener('input', () => updateConcInfo(drug));
+  });
+
+  function calculate(drug) {
+    const weightInput = document.getElementById(`${drug}-weight`);
+    const doseInput = document.getElementById(`${drug}-dose`);
+    const concInput = document.getElementById(`${drug}-conc`);
+    const resultBox = document.getElementById(`${drug}-result`);
+    const resultValue = document.getElementById(`${drug}-result-value`);
+    const breakdown = document.getElementById(`${drug}-breakdown`);
+
+    const weight = parseFloat(weightInput.value);
+    const dose = parseFloat(doseInput.value);
+    const conc = parseFloat(concInput.value);
+    const { unit, freq } = state[drug];
+
+    // Validation
+    resultBox.classList.remove('error-box');
+    if (isNaN(weight) || weight <= 0) {
+      showError(drug, 'Please enter a valid patient weight.');
+      return;
+    }
+    if (isNaN(dose) || dose <= 0) {
+      showError(drug, 'Please enter a valid dose amount.');
+      return;
+    }
+    if (isNaN(conc) || conc <= 0) {
+      showError(drug, 'Please enter a valid concentration.');
+      return;
+    }
+
+    // Convert dose to mg
+    let doseMg;
+    if (unit === 'mL') {
+      doseMg = dose * conc;
+    } else {
+      doseMg = dose;
+    }
+
+    const mgPerDose = doseMg;
+    const mgPerDay = doseMg * freq;
+    const mgKgDay = mgPerDay / weight;
+    const mgKgDose = mgPerDose / weight;
+
+    // Range check
+    const range = ranges[drug];
+    let rangeLabel = '';
+    let rangeClass = '';
+    if (mgKgDay < range.low) {
+      rangeLabel = `Below typical range (${range.low}–${range.high} mg/kg/day)`;
+      rangeClass = 'range-low';
+    } else if (mgKgDay > range.high) {
+      rangeLabel = `Above typical range (${range.low}–${range.high} mg/kg/day)`;
+      rangeClass = 'range-high';
+    } else {
+      rangeLabel = `Within typical range (${range.low}–${range.high} mg/kg/day)`;
+      rangeClass = 'range-ok';
+    }
+
+    const freqLabel = { 1:'QD (once)', 2:'BID (twice)', 3:'TID (three times)', 4:'QID (four times)' }[freq] || `${freq}x/day`;
+    const doseDisplay = unit === 'mL' ? `${dose} mL → ${mgPerDose.toFixed(1)} mg` : `${dose} mg`;
+
+    resultValue.textContent = `${mgKgDay.toFixed(2)} mg/kg/day`;
+    breakdown.innerHTML = `
+      Dose given: ${doseDisplay}<br>
+      Per dose: ${mgKgDose.toFixed(2)} mg/kg<br>
+      Frequency: ${freqLabel}<br>
+      Weight: ${weight} kg · Conc: ${conc} mg/mL<br>
+      <span class="range-indicator ${rangeClass}">${rangeLabel}</span>
+    `;
+
+    resultBox.classList.add('show');
+    resultBox.style.display = 'block';
+  }
+
+  function showError(drug, msg) {
+    const resultBox = document.getElementById(`${drug}-result`);
+    const resultValue = document.getElementById(`${drug}-result-value`);
+    const breakdown = document.getElementById(`${drug}-breakdown`);
+    resultBox.classList.add('show', 'error-box');
+    resultBox.style.display = 'block';
+    resultValue.textContent = msg;
+    breakdown.innerHTML = '';
+  }
+</script>
+</body>
+</html>
